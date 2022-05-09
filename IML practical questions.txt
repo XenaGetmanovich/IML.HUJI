@@ -1,0 +1,29 @@
+IML Practical Questions:
+1. What is the difference between the regular arrays and numpy arrays?
+its not, it's just easier to use, because the made creating an array into a function
+what is the gaussian univariate distribution? distribution of what? -its the normal distribution function, that was derived bt gauss, hence the name the estimator random varriable
+where to open python file - cool
+configure interperne - cool
+import numpy - cool
+understand why isnt pycharm accepting my float float int	
+array range
+
+samples - the value of the sample in the pdf according to the fitted value
+X - values of x
+Y 
+
+pdf of the value of the first extimation
+each sample get the value of the function
+get the pdf according to the mean and estimator we got at the beginning
+
+function pdf
+- 
+
+what is the meaning of the pdf
+
+
+mean - 
+recive samples
+calculate univariate by row (how to get a single row?)
+
+then create a vector where which line is a mean

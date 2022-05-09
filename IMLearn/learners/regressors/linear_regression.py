@@ -49,7 +49,31 @@ class LinearRegression(BaseEstimator):
         -----
         Fits model with or without an intercept depending on value of `self.include_intercept_`
         """
-        raise NotImplementedError()
+
+        n_rows = X.shape[0]
+        n_cols = X.shape[1]
+
+        # checking if invertible
+        if n_cols == n_rows and np.linalg.det(X) != 0:
+            # invertible case
+            X_T = np.transpose(X)
+            self.coefs_ = np.linalg.inv(X_T.dot(X)).dot(X_T).dot(y)
+        # not invertible case
+        else:
+            X_psudo_inv = pinv(X)
+            self.coefs_ = X_psudo_inv.dot(y)
+
+        if self.include_intercept_:
+            # finding the intercept
+            sum = 0
+            for i in range(n_cols):
+                sum += X[1][i]*self.coefs_[i]
+            w_0 = y[1] - sum
+            weights = [w_0]
+            for i in range(n_cols):
+                weights.append(self.coefs_[i])
+            self.coefs_ = weights
+        # raise NotImplementedError()
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -65,7 +89,25 @@ class LinearRegression(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
+        n_samples = X.shape[0]
+        n_feauters = X.shape[1]
+        responses = np.zeros(n_samples)
+        for i in range(n_samples):
+            # creating a weights vector in length of number of feature + 1
+            # to make the calculation simpler later on
+            if self.include_intercept_:
+                weights = self.coefs_
+            else:
+                weights = np.zeros(n_feauters)
+                for j in range(n_feauters):
+                    weights[j+1] = self.coefs_[j]
+            # calculating the result for each sample
+            sum = 0
+            for j in range(n_feauters):
+                sum += X[i][j] * weights[j+1]
+            responses[i] = weights[0] + sum
+        return responses
+        # raise NotImplementedError()
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -84,4 +126,20 @@ class LinearRegression(BaseEstimator):
         loss : float
             Performance under MSE loss function
         """
-        raise NotImplementedError()
+
+        # fit the samples
+        # predict the samples
+        # calculate the sum of the losses
+        self.fit(X, y)
+        predictions = self.predict(X)
+
+        def squared_loss(true_val, pre_val):
+            return (true_val - pre_val) ^ 2
+
+        sum = 0
+        n_samples = y.size  # number of samples
+        for i in range(n_samples):
+            sum += squared_loss(y[i], predictions[i])
+        return sum
+
+        # raise NotImplementedError()

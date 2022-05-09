@@ -4,6 +4,7 @@ from typing import NoReturn
 from ...base import BaseEstimator
 import numpy as np
 
+from IMLearn.metrics import misclassification_error
 
 def default_callback(fit: Perceptron, x: np.ndarray, y: int):
     pass
@@ -33,6 +34,7 @@ class Perceptron(BaseEstimator):
         to be filled in `Perceptron.fit` function.
 
     """
+
     def __init__(self,
                  include_intercept: bool = True,
                  max_iter: int = 1000,
@@ -75,8 +77,8 @@ class Perceptron(BaseEstimator):
 
     def _fit(self, X: np.ndarray, y: np.ndarray) -> NoReturn:
         """
-        Fit a halfspace to to given samples. Iterate over given data as long as there exists a sample misclassified
-        or that did not reach `self.max_iter_`
+        Fit a halfspace to to given samples. Iterate over given data as long as there exists a
+        sample misclassified or that did not reach `self.max_iter_`
 
         Parameters
         ----------
@@ -90,7 +92,26 @@ class Perceptron(BaseEstimator):
         -----
         Fits model with or without an intercept depending on value of `self.fit_intercept_`
         """
-        raise NotImplementedError()
+        num_of_samples = X.shape[0]
+        num_of_features = X.shape[1]
+        w_curr = np.zeros(num_of_features)
+        for i in range(self.max_iter_):
+            # going over all of the samples and looking for mistakes:
+            mistakes = False
+            self.coefs_ = w_curr
+            for j in range(num_of_samples):
+                # in case of a mistake, we update W (coeffients vector), call the callable and
+                # continue to the next iteration
+                if not (y[j] * (np.inner(X[j].transpose(), w_curr)) > 0):
+                    self.callback_(self, X[j], np.inner(X[j].transpose(), w_curr))
+                    w_curr = w_curr + y[j] * X[j]
+                    mistakes = True
+                    break
+            # we get here iff we hit no break in the inner loop, which means there was no mistakes
+            if not mistakes:
+                return
+
+        # raise NotImplementedError()
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -106,7 +127,12 @@ class Perceptron(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
+        num_of_samples = X.shape[0]
+        y = np.zeros(num_of_samples)
+        for i in range(num_of_samples):
+            y[i] = np.dot(X[i].transpose(), self.coefs_)
+        return y
+        # raise NotImplementedError()
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -125,4 +151,6 @@ class Perceptron(BaseEstimator):
         loss : float
             Performance under missclassification loss function
         """
-        raise NotImplementedError()
+        y_pred = self._predict(X)
+        return misclassification_error(y, y_pred)
+        # raise NotImplementedError()

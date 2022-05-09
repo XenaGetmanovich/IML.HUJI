@@ -51,8 +51,14 @@ class UnivariateGaussian:
         Sets `self.mu_`, `self.var_` attributes according to calculated estimation (where
         estimator is either biased or unbiased). Then sets `self.fitted_` attribute to `True`
         """
-        raise NotImplementedError()
-
+        self.mu_ = (1 / X.size) * X.sum()
+        sum = 0
+        for i in range(X.size):
+            sum += (X[i] - self.mu_)**2
+        if self.biased_:
+            self.var_ = (1/X.size)*sum
+        else:
+            self.var_ = (1/(X.size - 1))*sum
         self.fitted_ = True
         return self
 
@@ -75,8 +81,15 @@ class UnivariateGaussian:
         ValueError: In case function was called prior fitting the model
         """
         if not self.fitted_:
-            raise ValueError("Estimator must first be fitted before calling `pdf` function")
-        raise NotImplementedError()
+            raise ValueError("Estimator must first be fitted before calling "
+                             "`pdf` function")
+        num_of_samples = X.size
+        values = np.zeros(num_of_samples)
+        for i in range(num_of_samples):
+            value = (1 / np.sqrt(2 * np.pi * self.var_)) * np.e ** (
+                        (-0.5) * ((X[i] - self.mu_) / np.sqrt(self.var_)) ** 2)
+            values[i] = value
+        return values
 
     @staticmethod
     def log_likelihood(mu: float, sigma: float, X: np.ndarray) -> float:
@@ -97,7 +110,13 @@ class UnivariateGaussian:
         log_likelihood: float
             log-likelihood calculated
         """
-        raise NotImplementedError()
+        num_of_samples = X.size
+        sum = 0
+        for x in X:
+            # calculating the lof of the multiplication of the pdf values
+            sum += -0.5*((x-mu)/sigma)**2
+        result = -num_of_samples*(np.log(sigma)+0.5*np.log(2*np.pi)) + sum
+        return result
 
 
 class MultivariateGaussian:
@@ -143,8 +162,33 @@ class MultivariateGaussian:
         Sets `self.mu_`, `self.cov_` attributes according to calculated estimation.
         Then sets `self.fitted_` attribute to `True`
         """
-        raise NotImplementedError()
+        # important to remember: the rows represent the samples, the cols
+        # represent the features
+        # calculating estimated mean:
+        n_features = X.shape[1]  # number of features
+        n_samples = X.shape[0]  # number of samples
+        mu_vector = np.zeros(n_features)
+        for i in range(n_features):
+            data_i = X[:, i:i+1]  # samples of only the i'th feature (column)
+            # calculating the estimate of the i th feature, using
+            # the univariate func we built before
+            mu_vector[i] = UnivariateGaussian().fit(data_i).mu_
 
+        self.mu_ = mu_vector
+        #calculate var:
+
+        def sigma_sum(i, j):
+            sum = 0
+            for k in range(n_samples):
+                sum += (X[k, i] - self.mu_[i])*(X[k, j] - self.mu_[j])
+            return sum
+
+        covar_matrix = np.zeros((n_features, n_features))
+        for i in range(n_features):
+            for j in range(n_features):
+                covar_matrix[i, j] = (1/n_samples)*(sigma_sum(i, j))
+
+        self.cov_ = covar_matrix
         self.fitted_ = True
         return self
 
@@ -168,7 +212,12 @@ class MultivariateGaussian:
         """
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `pdf` function")
-        raise NotImplementedError()
+        n_samples = X.shape[1]  # number of samples
+        func_vector = np.zeros(n_samples)
+        for i in range(n_samples):
+            i_degree = ((X[i, :] - self.mu_).transpose().dot(inv(self.cov_)).dot(X[i, :] - self.mu_))
+            func_vector[i] = (1/np.linalg.det(self.cov_)(2*np.pi)**n_samples)*np.e**i_degree
+        return func_vector
 
     @staticmethod
     def log_likelihood(mu: np.ndarray, cov: np.ndarray, X: np.ndarray) -> float:
@@ -189,4 +238,13 @@ class MultivariateGaussian:
         log_likelihood: float
             log-likelihood calculated over all input data and under given parameters of Gaussian
         """
-        raise NotImplementedError()
+        n_samples = X.shape[0]
+        n_features = X.shape[1]  # number of samples
+        cov_det = np.linalg.det(cov)
+        likelihood = 0
+        for i in range(n_samples):
+            sample_mu_dist = X[i, :] - mu.transpose()
+            MD = (sample_mu_dist.transpose().dot(inv(cov)).dot(sample_mu_dist))
+            f_xi = -0.5 * (n_features * np.log(2*np.pi) + np.log(cov_det) + MD)
+            likelihood += f_xi
+        return likelihood
