@@ -39,7 +39,8 @@ class DecisionStump(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        raise NotImplementedError()
+        self.sign_ = 1
+        self.threshold_ = (self._find_threshold(X[:, self.j_], y, self.sign_))[0]
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -63,7 +64,17 @@ class DecisionStump(BaseEstimator):
         Feature values strictly below threshold are predicted as `-sign` whereas values which equal
         to or above the threshold are predicted as `sign`
         """
-        raise NotImplementedError()
+        # go over each value, check if it's above or below the threshold
+        n_samples = X.shape[0]
+        y = np.zeros(n_samples)
+        for i in range(n_samples):
+            if X[i][self.j_] < self.threshold_:
+                y[i] = -self.sign_
+            else:
+                y[i] = self.sign_
+        return y
+
+        # raise NotImplementedError()
 
     def _find_threshold(self, values: np.ndarray, labels: np.ndarray, sign: int) -> Tuple[float, float]:
         """
@@ -95,7 +106,52 @@ class DecisionStump(BaseEstimator):
         For every tested threshold, values strictly below threshold are predicted as `-sign` whereas values
         which equal to or above the threshold are predicted as `sign`
         """
-        raise NotImplementedError()
+        # for each element in the feature column we want to predict labels, calculate loss, compare
+        # to the best one
+        n_samples = values.shape[0]
+        best_thresh = 0
+        best_thresh_mistakes = n_samples + 1  # setting the number of mistakes to be more than
+        # possible so that the best threshold will be replaced
+        best_sign = 1
+
+        # predicts the labels given a threshold and a column of values
+        def local_predict(value_column, threshold):
+            n_samples = value_column.shape[0]  # number of samples
+            y = np.zeros(n_samples)
+            for j in range(n_samples):
+                if value_column[j] < threshold:
+                    y[j] = -1 * self.sign_
+                else:
+                    y[j] = self.sign_
+            return y
+
+        # calculate the misclacification loss given predicted, and real labels
+        def local_loss(y_true, y_pred):
+            n_samples = y_true.shape[0]
+            num_of_mistakes = 0
+            for i in range(n_samples):
+                if y_pred[i] != y_true[i]:
+                    num_of_mistakes += 1
+            return num_of_mistakes
+            # DELETE
+        sorted_y = labels
+        sorted_y.sort()
+        for i in range(n_samples):
+            curr_thresh = values[i]
+            curr_prediction = local_predict(values, curr_thresh)
+            curr_thresh_mistakes = local_loss(labels, curr_prediction)
+            # compare to best
+            if curr_thresh_mistakes < best_thresh_mistakes:
+                best_thresh = curr_thresh
+                best_thresh_mistakes = curr_thresh_mistakes
+                best_sign = self.sign_
+                #if switching the signs yields a better result we choose this sign
+            if n_samples - curr_thresh_mistakes < best_thresh_mistakes:
+                best_thresh = curr_thresh
+                best_thresh_mistakes = n_samples - curr_thresh_mistakes
+                best_sign = -1 * self.sign_
+        self.sign_ = best_sign
+        return best_thresh, best_thresh_mistakes
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -114,4 +170,10 @@ class DecisionStump(BaseEstimator):
         loss : float
             Performance under missclassification loss function
         """
-        raise NotImplementedError()
+        n_samples = X.shape[0]
+        y_pred = self.predict(X)
+        num_of_mistakes = 0
+        for i in range(n_samples):
+            if y_pred[i] != y[i]:
+                num_of_mistakes += 1
+        return num_of_mistakes

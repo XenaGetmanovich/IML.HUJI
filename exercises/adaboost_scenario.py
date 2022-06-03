@@ -1,10 +1,16 @@
 import numpy as np
 from typing import Tuple
-from IMLearn.learners.metalearners.adaboost import AdaBoost
+from IMLearn.metalearners.adaboost import AdaBoost
 from IMLearn.learners.classifiers import DecisionStump
 from utils import *
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+
+
+# DELETE #
+import time
+start_time = time.time()
+
 
 
 def generate_data(n: int, noise_ratio: float) -> Tuple[np.ndarray, np.ndarray]:
@@ -42,20 +48,43 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
     (train_X, train_y), (test_X, test_y) = generate_data(train_size, noise), generate_data(test_size, noise)
 
     # Question 1: Train- and test errors of AdaBoost in noiseless case
-    raise NotImplementedError()
+    ada_learner = AdaBoost(DecisionStump, n_learners)
+    AdaBoost.fit(ada_learner, train_X, train_y)
+    train_mistakes = np.zeros(n_learners)
+    test_mistakes = np.zeros(n_learners)
+    mistakes = np.zeros((n_learners, 2))
+    for i in range(n_learners):
+        train_mistakes[i] = ada_learner.partial_loss(train_X, train_y, i)
+        test_mistakes[i] = ada_learner.partial_loss(test_X, test_y, i)
+
+    # plotting the graph
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=np.arange(n_learners), y=train_mistakes, name="train set"))
+    fig.add_trace(go.Scatter(x=np.arange(n_learners), y=test_mistakes, name="test set"))
+    fig.update_layout(
+        title="train set and test set mistakes as a function of the number of the learners",
+        xaxis_title="number of mistakes",
+        yaxis_title="number of learners", )
+    fig.show()
 
     # Question 2: Plotting decision surfaces
     T = [5, 50, 100, 250]
     lims = np.array([np.r_[train_X, test_X].min(axis=0), np.r_[train_X, test_X].max(axis=0)]).T + np.array([-.1, .1])
-    raise NotImplementedError()
 
-    # Question 3: Decision surface of best performing ensemble
-    raise NotImplementedError()
-
-    # Question 4: Decision surface with weighted samples
-    raise NotImplementedError()
+    #
+    # # Question 3: Decision surface of best performing ensemble
+    # raise NotImplementedError()
+    #
+    # # Question 4: Decision surface with weighted samples
+    # raise NotImplementedError()
 
 
 if __name__ == '__main__':
     np.random.seed(0)
-    raise NotImplementedError()
+    fit_and_evaluate_adaboost(0)
+    # stumps = np.ndarray(5, DecisionStump)
+    # a = DecisionStump()
+    # stumps.fill(DecisionStump())
+    #
+    print("--- %s seconds ---" % (time.time() - start_time))
+    # raise NotImplementedError()
